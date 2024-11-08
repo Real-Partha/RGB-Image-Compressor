@@ -53,7 +53,6 @@ async def process_image_generator(image_data, quality_factor):
                 "color_mode": image.mode,
                 "format": image.format,
                 "bits_per_pixel": 8 if image.mode in ['L', 'P'] else 24 if image.mode == 'RGB' else 32,
-                "histogram_data": image.histogram(),
             },
         }
         yield json.dumps(final_response) + "\n"
