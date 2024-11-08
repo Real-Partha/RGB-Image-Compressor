@@ -1,8 +1,158 @@
-// App.jsx
 import React, { useState } from "react";
 import "./App.css";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiX, FiDownload, FiUpload } from "react-icons/fi";
+import { FiX, FiDownload, FiUpload, FiImage, FiInfo } from "react-icons/fi";
+import { BiImageAlt, BiColorFill } from "react-icons/bi";
+import { MdHighQuality } from "react-icons/md";
+
+const ImageInsights = ({ result, file }) => {
+  const [showDetails, setShowDetails] = useState(false);
+
+  const getImageDetails = async () => {
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    await new Promise((resolve) => (img.onload = resolve));
+    return {
+      width: img.width,
+      height: img.height,
+      aspectRatio: (img.width / img.height).toFixed(2),
+      fileType: file.type,
+      fileName: file.name,
+    };
+  };
+
+  const [imageDetails, setImageDetails] = useState(null);
+
+  React.useEffect(() => {
+    getImageDetails().then(setImageDetails);
+  }, [file]);
+
+  return (
+    <div className="image-insights">
+      <motion.div
+        className="insights-header"
+        onClick={() => setShowDetails(!showDetails)}
+        style={{ cursor: "pointer" }}
+      >
+        <h5>
+          <FiInfo style={{ marginRight: "8px" }} />
+          Image Analysis & Insights
+        </h5>
+      </motion.div>
+
+      <AnimatePresence>
+        {showDetails && imageDetails && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="insights-grid">
+              <div className="insight-item">
+                <BiImageAlt className="insight-icon" />
+                <span className="insight-label">Dimensions</span>
+                <span className="insight-value">
+                  {imageDetails.width} x {imageDetails.height}
+                </span>
+              </div>
+
+              <div className="insight-item">
+                <MdHighQuality className="insight-icon" />
+                <span className="insight-label">Aspect Ratio</span>
+                <span className="insight-value">
+                  {imageDetails.aspectRatio}
+                </span>
+              </div>
+
+              <div className="insight-item">
+                <BiColorFill className="insight-icon" />
+                <span className="insight-label">Format</span>
+                <span className="insight-value">
+                  {imageDetails.fileType.split("/")[1].toUpperCase()}
+                </span>
+              </div>
+
+              <div className="insight-item">
+                <span className="insight-label">Size Reduction</span>
+                <div className="reduction-bar-container">
+                  <div className="reduction-bar">
+                    <motion.div
+                      className="reduction-fill"
+                      initial={{ width: 0 }}
+                      animate={{
+                        width: `${
+                          ((result.original_size - result.compressed_size) /
+                            result.original_size) *
+                          100
+                        }%`,
+                      }}
+                      transition={{ duration: 1 }}
+                    />
+                  </div>
+                  <span className="reduction-value">
+                    {(
+                      ((result.original_size - result.compressed_size) /
+                        result.original_size) *
+                      100
+                    ).toFixed(1)}
+                    % smaller
+                  </span>
+                </div>
+              </div>
+
+              <div className="insight-item full-width">
+                <span className="insight-label">Compression Performance</span>
+                <div className="performance-metrics">
+                  <div className="metric">
+                    <span className="metric-label">Speed</span>
+                    <div className="metric-bar">
+                      <motion.div
+                        className="metric-fill"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(quality / 50) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="metric">
+                    <span className="metric-label">Quality</span>
+                    <div className="metric-bar">
+                      <motion.div
+                        className="metric-fill"
+                        initial={{ width: 0 }}
+                        animate={{
+                          width: `${
+                            100 -
+                            (result.compressed_size / result.original_size) *
+                              100
+                          }%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// Progress bar component
+const ProgressBar = ({ progress }) => (
+  <div className="progress-container">
+    <div className="progress-bar">
+      <motion.div
+        className="progress-fill"
+        initial={{ width: 0 }}
+        animate={{ width: `${progress}%` }}
+      />
+    </div>
+    <span className="progress-text">{progress}%</span>
+  </div>
+);
 
 function App() {
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -10,6 +160,7 @@ function App() {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [progress, setProgress] = useState({});
 
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files);
@@ -23,6 +174,20 @@ function App() {
   const removeFile = (index) => {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
+
+  const ProgressIndicator = ({ fileName, progress }) => (
+    <div className="progress-indicator">
+      <span className="filename">{fileName}</span>
+      <div className="progress-bar">
+        <motion.div
+          className="progress-fill"
+          initial={{ width: 0 }}
+          animate={{ width: `${progress}%` }}
+        />
+      </div>
+      <span className="progress-text">{progress}%</span>
+    </div>
+  );
 
   const handleCompress = async () => {
     setLoading(true);
@@ -40,24 +205,53 @@ function App() {
           body: formData,
         });
 
-        if (!response.ok)
-          throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        const compressedImageBase64 = await arrayBufferToBase64(
-          data.compressed_image.data
-        );
-        compressedResults.push({
-          ...data,
-          originalFile: file,
-          compressed_image_base64: compressedImageBase64,
-        });
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (!line) continue;
+            const data = JSON.parse(line);
+
+            if (data.status === "error") {
+              setError(`Error processing ${file.name}: ${data.message}`);
+              continue;
+            }
+
+            if (data.status !== "completed") {
+              setProgress((prev) => ({
+                ...prev,
+                [file.name]: data.progress,
+              }));
+              continue;
+            }
+
+            const compressedImageBase64 = await arrayBufferToBase64(
+              data.compressed_image.data
+            );
+            compressedResults.push({
+              ...data,
+              originalFile: file,
+              compressed_image_base64: compressedImageBase64,
+            });
+          }
+        }
       } catch (error) {
-        setError(error.message);
+        setError(`Error processing ${file.name}: ${error.message}`);
       }
     }
 
     setResults(compressedResults);
     setLoading(false);
+    setProgress({});
   };
 
   // Helper function to convert array buffer to base64
@@ -158,7 +352,17 @@ function App() {
             "Compress Images"
           )}
         </motion.button>
-
+        {Object.entries(progress).length > 0 && (
+          <div className="progress-container">
+            {Object.entries(progress).map(([fileName, progress]) => (
+              <ProgressIndicator
+                key={fileName}
+                fileName={fileName}
+                progress={progress}
+              />
+            ))}
+          </div>
+        )}
         <div className="results-grid">
           {results.map((result, index) => (
             <motion.div
@@ -202,72 +406,13 @@ function App() {
                       <FiDownload />
                     </motion.button>
                   </div>
-                  <div className="compression-details">
-                    <h5>Compression Analysis</h5>
-                    <div className="stats-grid">
-                      <div className="stat-item">
-                        <span className="stat-label">Compressed Size</span>
-                        <span className="stat-value">
-                          {(result.compressed_size / 1024).toFixed(2)} KB
-                        </span>
-                      </div>
-                      <div className="stat-item">
-                        <span className="stat-label">Compression Ratio</span>
-                        <span className="stat-value">
-                          {result.compression_ratio.toFixed(2)}x
-                        </span>
-                      </div>
-                      <div className="stat-item">
-                        <span className="stat-label">Space Saved</span>
-                        <span className="stat-value">
-                          {(
-                            ((result.original_size - result.compressed_size) /
-                              result.original_size) *
-                            100
-                          ).toFixed(1)}
-                          %
-                        </span>
-                      </div>
-                      <div className="stat-item">
-                        <span className="stat-label">Quality Setting</span>
-                        <span className="stat-value">{quality}/50</span>
-                      </div>
-                    </div>
-                    <div className="compression-chart">
-                      <div
-                        style={{
-                          width: "100%",
-                          height: "20px",
-                          background: "#e2e8f0",
-                          borderRadius: "10px",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: `${
-                              (result.compressed_size / result.original_size) *
-                              100
-                            }%`,
-                            height: "100%",
-                            background:
-                              "linear-gradient(to right, var(--primary-color), var(--secondary-color))",
-                            transition: "width 0.5s ease-in-out",
-                          }}
-                        />
-                      </div>
-                      <div
-                        style={{
-                          textAlign: "center",
-                          marginTop: "0.5rem",
-                          fontSize: "0.875rem",
-                          color: "#64748b",
-                        }}
-                      >
-                        Size Reduction Visualization
-                      </div>
-                    </div>
-                  </div>
+
+                  {/* Add the new ImageInsights component */}
+                  <ImageInsights
+                    result={result}
+                    file={result.originalFile}
+                    quality={quality}
+                  />
                 </div>
               </div>
             </motion.div>
