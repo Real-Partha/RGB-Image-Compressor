@@ -109,18 +109,53 @@ const UploadSection = ({
   );
 };
 
-const ProgressIndicator = ({ fileName, progress }) => (
-  <div className="progress-indicator">
-    <span className="filename">{fileName}</span>
-    <div className="progress-bar">
-      <motion.div
-        className="progress-fill"
-        initial={{ width: 0 }}
-        animate={{ width: `${progress}%` }}
-      />
-    </div>
-    <span className="progress-text">{progress}%</span>
-  </div>
-);
+const ProgressIndicator = ({ fileName, progress }) => {
+  // Function to get status message based on progress
+  const getStatusMessage = (progress) => {
+    if (progress === 0) return "Started";
+    if (progress <= 20) return "Converting image format...";
+    if (progress <= 40) return "Processing image data...";
+    if (progress <= 60) return "Compressing image...";
+    if (progress <= 80) return "Finalizing compression...";
+    if (progress === 100) return "Completed";
+    return "Processing...";
+  };
 
+  // Function to get status color based on progress
+  const getStatusColor = (progress) => {
+    if (progress === 100) return "#22c55e"; // success color
+    return "#6366f1"; // primary color
+  };
+
+  return (
+    <motion.div
+      className="progress-indicator"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
+      <div className="filename">{fileName}</div>
+      <div className="progress-bar">
+        <motion.div
+          className="progress-fill"
+          initial={{ width: "0%" }}
+          animate={{ width: `${progress}%` }}
+          transition={{ duration: 0.3 }}
+          style={{
+            background: `linear-gradient(
+              45deg,
+              ${getStatusColor(progress)},
+              ${progress === 100 ? "#4ade80" : "#818cf8"}
+            )`,
+          }}
+        />
+      </div>
+      <div className="progress-text">
+        <span style={{ color: getStatusColor(progress) }}>
+          {getStatusMessage(progress)}
+        </span>
+        <span>{progress}% Complete</span>
+      </div>
+    </motion.div>
+  );
+};
 export default UploadSection;

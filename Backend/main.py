@@ -21,20 +21,20 @@ app.add_middleware(
 async def process_image_generator(image_data, quality_factor):
     try:
         image = Image.open(io.BytesIO(image_data))
-        yield json.dumps({"status": "started", "progress": 0}) + "\n"
+        yield json.dumps({"status": "Started...", "progress": 0}) + "\n"
 
         if image.mode == "RGBA":
             image = image.convert("RGB")
-        yield json.dumps({"status": "converting", "progress": 20}) + "\n"
+        yield json.dumps({"status": "Converting...", "progress": 20}) + "\n"
 
         image_array = np.array(image)
-        yield json.dumps({"status": "processing", "progress": 40}) + "\n"
+        yield json.dumps({"status": "Processing...", "progress": 40}) + "\n"
 
         compressed = compress_image(image_array, quality_factor)
-        yield json.dumps({"status": "compressing", "progress": 60}) + "\n"
+        yield json.dumps({"status": "Compressing...", "progress": 60}) + "\n"
 
         decompressed = decompress_image(compressed)
-        yield json.dumps({"status": "finalizing", "progress": 80}) + "\n"
+        yield json.dumps({"status": "Finalizing...", "progress": 80}) + "\n"
 
         output_image = Image.fromarray(decompressed)
         img_byte_arr = io.BytesIO()
