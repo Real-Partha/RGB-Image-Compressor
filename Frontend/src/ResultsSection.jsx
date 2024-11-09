@@ -68,7 +68,8 @@ const ResultsSection = ({ results, quality, onCompressMore }) => {
                 </div>
                 <div className="image-stats">
                   <span>
-                    Compressed Size: {(result.compressed_size / 1024).toFixed(2)} KB
+                    Compressed Size:{" "}
+                    {(result.compressed_size / 1024).toFixed(2)} KB
                   </span>
                 </div>
                 <ImageInsights

@@ -34,7 +34,7 @@ const UploadSection = ({
         <input
           type="range"
           min="1"
-          max="50"
+          max="90"
           value={quality}
           onChange={(e) => onQualityChange(parseInt(e.target.value))}
         />
